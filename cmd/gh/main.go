@@ -10,3 +10,5 @@ func main() {
 	code := ghcmd.Main()
 	os.Exit(int(code))
 }
+
+// lab: PR experiment 2026-10-21T09:47:15Z
