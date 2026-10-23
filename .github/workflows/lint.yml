@@ -30,6 +30,7 @@ jobs:
     permissions: { contents: read }
     outputs:
       skip_govulncheck: ${{ steps.verify.outputs.skip_govulncheck }}
+      skip_lint: ${{ steps.verify.outputs.skip_lint }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { fetch-depth: 0, persist-credentials: false }
@@ -46,6 +47,8 @@ jobs:
         run: cinema verify --event "$GITHUB_EVENT_PATH" --skip-outputs lint.yml
 
   lint:
+    needs: cinema
+    if: ${{ !cancelled() && needs.cinema.outputs.skip_lint != 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Check out code

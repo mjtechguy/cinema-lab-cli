@@ -2,6 +2,36 @@
 # pass `cinema run --commit HEAD <id>` and agree with CI before it counts for anything.
 schema_version: 1
 tasks:
+  # go.yml: build (os=ubuntu-latest)
+  build-ubuntu-latest:
+    argv:
+      - bash
+      - -eo
+      - pipefail
+      - -c
+      - |-
+        (
+        go mod download
+        )
+        (
+        go test -race -tags=integration ./...
+        )
+        (
+        go build -v ./cmd/gh
+        )
+    platform: linux/amd64
+    runtime:
+      go: 1.27.3
+    toolchain:
+      - cmd: [go, version]
+    covers: go.yml#build
+    leg:
+      os: ubuntu-latest
+    cpus: 4
+    timeout: 60m
+    reuse:
+      allowed: true
+      max_age: 24h
   # lint.yml: govulncheck
   govulncheck:
     argv:
@@ -20,6 +50,26 @@ tasks:
     toolchain:
       - cmd: [go, version]
     covers: lint.yml#govulncheck
+    cpus: 4
+    timeout: 60m
+    reuse:
+      allowed: true
+      max_age: 24h
+  # lint.yml: lint
+  # NOTE: golangci-lint-action → the official golangci-lint 2.15.0 release binary, SHA-256 checked
+  lint:
+    argv:
+      - bash
+      - -eo
+      - pipefail
+      - -c
+      - "(\ngo mod tidy -diff\ngo fix -diff ./...\n)\n(\ngl=$(mktemp -d)\ncurl -sSfL -o \"$gl/gl.tgz\" https://github.com/golangci/golangci-lint/releases/download/v2.15.0/golangci-lint-2.15.0-linux-amd64.tar.gz\necho \"9b7fe6a6bf6334b98decf8d86b11415ea7889afdabdd1959fdce23af2a9ebcea  $gl/gl.tgz\" | sha256sum -c - >/dev/null\ntar -xzf \"$gl/gl.tgz\" -C \"$gl\" --strip-components=1\nGOLANGCI_LINT_CACHE=\"$gl/cache\" \"$gl/golangci-lint\" run \n)\n(\nexport GOROOT=$(go env GOROOT)\nexport PATH=${GOROOT}/bin:$PATH\nmake licenses-check\n)"
+    platform: linux/amd64
+    runtime:
+      go: 1.27.3
+    toolchain:
+      - cmd: [go, version]
+    covers: lint.yml#lint
     cpus: 4
     timeout: 60m
     reuse:
