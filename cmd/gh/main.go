@@ -10,3 +10,5 @@ func main() {
 	code := ghcmd.Main()
 	os.Exit(int(code))
 }
+
+// lab: matrix-exclude experiment 2026-10-23T07:41:02Z
