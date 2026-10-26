@@ -21,7 +21,7 @@ require (
 	github.com/charmbracelet/x/ansi v0.11.9
 	github.com/cli/go-gh/v2 v2.16.2
 	github.com/cli/go-internal v0.0.0-20241025142207-6c48bcd5ce24
-	github.com/cli/oauth v1.2.2
+	github.com/cli/oauth v1.3.0
 	github.com/cli/safeexec v1.0.1
 	github.com/cpuguy83/go-md2man/v2 v2.0.7
 	github.com/creack/pty v1.1.24
