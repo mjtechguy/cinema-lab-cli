@@ -3,6 +3,7 @@
 schema_version: 1
 tasks:
   # go.yml: build (os=ubuntu-latest)
+  # NOTE: $GITHUB_ENV, $GITHUB_PATH and $GITHUB_OUTPUT are emulated with temp files, loaded before each step
   build-ubuntu-latest:
     argv:
       - bash
@@ -10,13 +11,37 @@ tasks:
       - pipefail
       - -c
       - |-
+        export GITHUB_ENV=$(mktemp) GITHUB_PATH=$(mktemp) GITHUB_OUTPUT=$(mktemp) GITHUB_STEP_SUMMARY=/dev/null
+        trap 'rm -f "$GITHUB_ENV" "$GITHUB_PATH" "$GITHUB_OUTPUT"' EXIT
+        _gh_load() {
+          local l n d v x p
+          while IFS= read -r l; do
+            n=${l%%=*}
+            if [[ $n == *'<<'* ]]; then
+              n=${l%%<<*} d=${l#*<<} v=
+              while IFS= read -r x && [[ $x != "$d" ]]; do v+=${v:+$'\n'}$x; done
+              export "$n=$v"
+            elif [[ $l == *=* ]]; then
+              export "$n=${l#*=}"
+            fi
+          done <"$GITHUB_ENV"
+          while IFS= read -r p; do [[ -n $p ]] && PATH=$p:$PATH; done <"$GITHUB_PATH"
+        }
         (
+          _gh_load
+          cd .
+        echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+        )
+        (
+          _gh_load
         go mod download
         )
         (
+          _gh_load
         go test -race -tags=integration ./...
         )
         (
+          _gh_load
         go build -v ./cmd/gh
         )
     platform: linux/amd64
@@ -25,14 +50,18 @@ tasks:
     toolchain:
       - cmd: [go, version]
     covers: go.yml#build
+    job_digest: sha256:c3e05610670981d041d050224c3a3d9de4cf65efdf97eda4b40ec378e3e351b2
     leg:
       os: ubuntu-latest
     cpus: 4
-    timeout: 60m
+    memory: 16g
+    timeout: 360m
     reuse:
       allowed: true
       max_age: 24h
+    graduated: {job_digest: "sha256:c3e05610670981d041d050224c3a3d9de4cf65efdf97eda4b40ec378e3e351b2", backtested: 4, ci_failures: 2, agreed: 0, at: "2026-10-31"}
   # lint.yml: govulncheck
+  # NOTE: $GITHUB_ENV, $GITHUB_PATH and $GITHUB_OUTPUT are emulated with temp files, loaded before each step
   govulncheck:
     argv:
       - bash
@@ -40,7 +69,29 @@ tasks:
       - pipefail
       - -c
       - |-
+        export GITHUB_ENV=$(mktemp) GITHUB_PATH=$(mktemp) GITHUB_OUTPUT=$(mktemp) GITHUB_STEP_SUMMARY=/dev/null
+        trap 'rm -f "$GITHUB_ENV" "$GITHUB_PATH" "$GITHUB_OUTPUT"' EXIT
+        _gh_load() {
+          local l n d v x p
+          while IFS= read -r l; do
+            n=${l%%=*}
+            if [[ $n == *'<<'* ]]; then
+              n=${l%%<<*} d=${l#*<<} v=
+              while IFS= read -r x && [[ $x != "$d" ]]; do v+=${v:+$'\n'}$x; done
+              export "$n=$v"
+            elif [[ $l == *=* ]]; then
+              export "$n=${l#*=}"
+            fi
+          done <"$GITHUB_ENV"
+          while IFS= read -r p; do [[ -n $p ]] && PATH=$p:$PATH; done <"$GITHUB_PATH"
+        }
         (
+          _gh_load
+          cd .
+        echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+        )
+        (
+          _gh_load
         govulncheck_version=$(grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' .github/govulncheck-version)
         go run "golang.org/x/vuln/cmd/govulncheck@$govulncheck_version" ./...
         )
@@ -50,28 +101,35 @@ tasks:
     toolchain:
       - cmd: [go, version]
     covers: lint.yml#govulncheck
+    job_digest: sha256:c3b0226a25a1b726047b460b11a00aabfa9ace3e6a9b5e782847ed4ef7870d64
     cpus: 4
-    timeout: 60m
+    memory: 16g
+    timeout: 360m
     reuse:
       allowed: true
       max_age: 24h
+    graduated: {job_digest: "sha256:c3b0226a25a1b726047b460b11a00aabfa9ace3e6a9b5e782847ed4ef7870d64", backtested: 3, ci_failures: 1, agreed: 0, at: "2026-10-31"}
   # lint.yml: lint
   # NOTE: golangci-lint-action → the official golangci-lint 2.15.0 release binary, SHA-256 checked
+  # NOTE: $GITHUB_ENV, $GITHUB_PATH and $GITHUB_OUTPUT are emulated with temp files, loaded before each step
   lint:
     argv:
       - bash
       - -eo
       - pipefail
       - -c
-      - "(\ngo mod tidy -diff\ngo fix -diff ./...\n)\n(\ngl=$(mktemp -d)\ncurl -sSfL -o \"$gl/gl.tgz\" https://github.com/golangci/golangci-lint/releases/download/v2.15.0/golangci-lint-2.15.0-linux-amd64.tar.gz\necho \"9b7fe6a6bf6334b98decf8d86b11415ea7889afdabdd1959fdce23af2a9ebcea  $gl/gl.tgz\" | sha256sum -c - >/dev/null\ntar -xzf \"$gl/gl.tgz\" -C \"$gl\" --strip-components=1\nGOLANGCI_LINT_CACHE=\"$gl/cache\" \"$gl/golangci-lint\" run \n)\n(\nexport GOROOT=$(go env GOROOT)\nexport PATH=${GOROOT}/bin:$PATH\nmake licenses-check\n)"
+      - "export GITHUB_ENV=$(mktemp) GITHUB_PATH=$(mktemp) GITHUB_OUTPUT=$(mktemp) GITHUB_STEP_SUMMARY=/dev/null\ntrap 'rm -f \"$GITHUB_ENV\" \"$GITHUB_PATH\" \"$GITHUB_OUTPUT\"' EXIT\n_gh_load() {\n  local l n d v x p\n  while IFS= read -r l; do\n    n=${l%%=*}\n    if [[ $n == *'<<'* ]]; then\n      n=${l%%<<*} d=${l#*<<} v=\n      while IFS= read -r x && [[ $x != \"$d\" ]]; do v+=${v:+$'\\n'}$x; done\n      export \"$n=$v\"\n    elif [[ $l == *=* ]]; then\n      export \"$n=${l#*=}\"\n    fi\n  done <\"$GITHUB_ENV\"\n  while IFS= read -r p; do [[ -n $p ]] && PATH=$p:$PATH; done <\"$GITHUB_PATH\"\n}\n(\n  _gh_load\n  cd .\necho \"$(go env GOPATH)/bin\" >> \"$GITHUB_PATH\"\n)\n(\n  _gh_load\ngo mod tidy -diff\ngo fix -diff ./...\n)\n(\n  _gh_load\ngl=$(mktemp -d)\ncurl -sSfL -o \"$gl/gl.tgz\" https://github.com/golangci/golangci-lint/releases/download/v2.15.0/golangci-lint-2.15.0-linux-amd64.tar.gz\necho \"9b7fe6a6bf6334b98decf8d86b11415ea7889afdabdd1959fdce23af2a9ebcea  $gl/gl.tgz\" | sha256sum -c - >/dev/null\ntar -xzf \"$gl/gl.tgz\" -C \"$gl\" --strip-components=1\nGOLANGCI_LINT_CACHE=\"$gl/cache\" \"$gl/golangci-lint\" run \n)\n(\n  _gh_load\nexport GOROOT=$(go env GOROOT)\nexport PATH=${GOROOT}/bin:$PATH\nmake licenses-check\n)"
     platform: linux/amd64
     runtime:
       go: 1.27.3
     toolchain:
       - cmd: [go, version]
     covers: lint.yml#lint
+    job_digest: sha256:8884c25d7f963d597bea74d32ef46a4c75f9917f85d8fad5945c3dd89ed9a861
     cpus: 4
-    timeout: 60m
+    memory: 16g
+    timeout: 360m
     reuse:
       allowed: true
       max_age: 24h
+    graduated: {job_digest: "sha256:8884c25d7f963d597bea74d32ef46a4c75f9917f85d8fad5945c3dd89ed9a861", backtested: 3, ci_failures: 1, agreed: 0, at: "2026-10-31"}
