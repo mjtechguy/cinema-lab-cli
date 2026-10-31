@@ -172,3 +172,5 @@ func FormatSize(n int64) string {
 	value := float64(n) / float64(div)
 	return fmt.Sprintf("%.1f %s", value, units[exp])
 }
+
+// lab: a code-only change, to test reuse from a Mac.
