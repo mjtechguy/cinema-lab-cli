@@ -20,7 +20,7 @@ jobs:
         with: { fetch-depth: 0, persist-credentials: false }
       - name: install cinema
         run: |
-          go install github.com/billiondollarsolo/cinema/cmd/cinema@v0.0.0-20261031013857-eb5508bec678
+          go install github.com/billiondollarsolo/cinema/cmd/cinema@v0.0.0-20261031014530-e70d16a753e0
           sudo mv "$(go env GOPATH)/bin/cinema" /usr/local/bin/cinema
       - id: verify
         name: skip jobs that already passed (signed cinema receipts)
