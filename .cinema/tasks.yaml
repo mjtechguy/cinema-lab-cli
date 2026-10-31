@@ -53,6 +53,7 @@ tasks:
     job_digest: sha256:c3e05610670981d041d050224c3a3d9de4cf65efdf97eda4b40ec378e3e351b2
     leg:
       os: ubuntu-latest
+    runs_on: ubuntu-latest
     cpus: 4
     memory: 16g
     timeout: 360m
@@ -102,6 +103,7 @@ tasks:
       - cmd: [go, version]
     covers: lint.yml#govulncheck
     job_digest: sha256:c3b0226a25a1b726047b460b11a00aabfa9ace3e6a9b5e782847ed4ef7870d64
+    runs_on: ubuntu-latest
     cpus: 4
     memory: 16g
     timeout: 360m
@@ -126,6 +128,7 @@ tasks:
       - cmd: [go, version]
     covers: lint.yml#lint
     job_digest: sha256:8884c25d7f963d597bea74d32ef46a4c75f9917f85d8fad5945c3dd89ed9a861
+    runs_on: ubuntu-latest
     cpus: 4
     memory: 16g
     timeout: 360m
